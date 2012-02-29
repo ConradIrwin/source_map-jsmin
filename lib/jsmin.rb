@@ -137,9 +137,14 @@ module JSMin
 
     private
 
+    # output one character
+    def putc(c)
+      @output << c
+    end
+
     # Corresponds to action(1) in jsmin.c.
     def action_output
-      @output << @a
+      putc @a
       action_copy
     end
 
@@ -149,7 +154,7 @@ module JSMin
 
       if @a == CHR_APOS || @a == CHR_QUOTE
         loop do
-          @output << @a
+          putc @a
           @a = get
 
           break if @a == @b
@@ -159,7 +164,7 @@ module JSMin
           end
 
           if @a == CHR_BACKSLASH
-            @output << @a
+            putc @a
             @a = get
 
             if @a[0] <= ORD_LF
@@ -177,8 +182,8 @@ module JSMin
       @b = nextchar
 
       if @b == CHR_FRONTSLASH && (@a == CHR_LF || @a =~ /[\(,=:\[!&|?{};]/)
-        @output << @a
-        @output << @b
+        putc @a
+        putc @b
 
         loop do
           @a = get
@@ -189,12 +194,12 @@ module JSMin
            #     return Form.Validator.getValidator('IsEmpty').test(element) || (/^(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]\.?){0,63}[a-z0-9!#$%&'*+/=?^_`{|}~-]@(?:(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\])$/i).test(element.get('value'));
           if @a == '['
             loop do
-              @output << @a
+              putc @a
               @a = get
               case @a
                 when ']' then break
                 when CHR_BACKSLASH then
-                  @output << @a
+                  putc @a
                   @a = get
                 when @a[0] <= ORD_LF
                   raise "JSMin parse error: unterminated regular expression " +
@@ -204,13 +209,13 @@ module JSMin
           elsif @a == CHR_FRONTSLASH
             break
           elsif @a == CHR_BACKSLASH
-            @output << @a
+            putc @a
             @a = get
           elsif @a[0] <= ORD_LF
             raise "unterminated regular expression : #{@a.inspect}"
           end
 
-          @output << @a
+          putc @a
         end
 
         @b = nextchar
