@@ -1,4 +1,4 @@
-require File.expand_path(File.dirname(__FILE__) + "/../lib/jsmin")
+require File.expand_path(File.dirname(__FILE__) + "/../lib/source_map/jsmin")
 require 'test/unit'
 
 class ExceptionTest < Test::Unit::TestCase

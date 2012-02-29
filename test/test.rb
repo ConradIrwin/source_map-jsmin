@@ -1,4 +1,4 @@
-require '../lib/jsmin'
+require '../lib/source_map/jsmin'
 
 def benchmark_c(input, output)
   start = Time.now
