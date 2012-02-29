@@ -79,6 +79,7 @@ module JSMin
       @js = StringScanner.new(input.is_a?(IO) ? input.read : input.to_s)
       @source = input.is_a?(IO) ? input.inspect : input.to_s[0..100]
       @line = 1
+      @column = 0
 
       @a         = "\n"
       @b         = nil
@@ -236,9 +237,13 @@ module JSMin
         @lookahead = nil
       else
         c = @js.getch
+        c.instance_variable_set(:@position, [@line, @column]) if c
         if c == CHR_LF || c == CHR_CR
           @line += 1
+          @column = 0
           return CHR_LF
+        else
+          @column += 1
         end
         return ' ' unless c.nil? || c[0] >= ORD_SPACE
       end
