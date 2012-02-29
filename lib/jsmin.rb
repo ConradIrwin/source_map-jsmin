@@ -29,6 +29,10 @@
 
 require 'strscan'
 
+require 'rubygems'
+require 'source_map'
+require 'json'
+
 # = JSMin
 #
 # Ruby implementation of Douglas Crockford's JavaScript minifier, JSMin.
@@ -45,7 +49,7 @@ require 'strscan'
 #
 #   File.open('example.js', 'r') {|file| puts JSMin.minify(file) }
 #
-module JSMin
+module SourceMap::JSMin
   CHR_APOS       = "'".freeze
   CHR_ASTERISK   = '*'.freeze
   CHR_BACKSLASH  = '\\'.freeze
@@ -75,16 +79,48 @@ module JSMin
 
     # Reads JavaScript from _input_ (which can be a String or an IO object) and
     # returns a String containing minified JS.
-    def minify(input)
+    #
+    # opts can contain
+    # :input_filename  # an input filename to include in the sourcemap (required).
+    # :output_filename # an output filename to include in the sourcemap.
+    # :source_root     # the sourceRoot to include in the sourcemap.
+    #
+    # While the output_filename can be anything you like, in order for the source
+    # map to work correctly, the :source_root + :input_filename must map to a browser-
+    # accessible version of the input file.
+    #
+    # If you set an absolute url as :input_filename, then you don't need to set
+    # :source_root, but it's nicer if you separate those concerns.
+    #
+    # @return SourceMap
+    #
+    # Once you have a source map object you'll probably want to save it into files
+    # as in the example:
+    #
+    #   map = JSMin::SourceMap.minify(File.read("foo.js"),
+    #                    :input_filename => 'foo.js',
+    #                    :output_filename => 'foo.min.js',
+    #                    :source_root => 'http://localhost:3000/javascripts/')
+    #
+    #   # output the generated, minified, javascript to foo.js.min
+    #   File.open('foo.min.js', 'w') { |f| f << map.generated_output }
+    #
+    #   # output the generated source map to foo.
+    #   File.open('foo.map.json', 'w') { |f| f << map.to_s }
+    #
+    def minify(input, opts={})
       @js = StringScanner.new(input.is_a?(IO) ? input.read : input.to_s)
       @source = input.is_a?(IO) ? input.inspect : input.to_s[0..100]
       @line = 1
       @column = 0
+      @file = opts[:input_filename] or raise ":input_filename is required"
 
       @a         = "\n"
       @b         = nil
       @lookahead = nil
-      @output    = ''
+      @source_map = SourceMap.new(:file => opts[:output_filename],
+                                 :source_root => opts[:source_root],
+                                 :generated_output => '')
 
       action_get
 
@@ -133,14 +169,20 @@ module JSMin
         end
       end
 
-      @output
+      @source_map
     end
 
     private
 
     # output one character
     def putc(c)
-      @output << c
+      if position = c.instance_variable_get(:@position)
+        @source_map.add_generated c, :source_line => position.first,
+                                 :source_col  => position.last,
+                                 :source => @file
+      else
+        @source_map.add_generated c
+      end
     end
 
     # Corresponds to action(1) in jsmin.c.
